@@ -29,6 +29,7 @@ if __name__ == '__main__':
     # PARAMS
     batch_size = 256
     epochs = 100
+    save_file_path = ".\\save\\base1\\"
 
     # LOAD DATA -------------------------------------------------------
     dataframe = load_data("D:\\Data", source='afad')
@@ -62,7 +63,7 @@ if __name__ == '__main__':
 
     # CALLBACKS -------------------------------------------------------
     callbacks = [
-        ModelCheckpoint(".\\save\\base\\", monitor='val_mse', verbose=1, save_best_only=True, save_weights_only=True,
+        ModelCheckpoint(save_file_path, monitor='val_mse', verbose=1, save_best_only=True, save_weights_only=True,
                         mode='min'),
     ]
 
