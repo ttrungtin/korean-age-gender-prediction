@@ -1,7 +1,8 @@
 import tensorflow as tf
+import os
 
 from model import base
-from utils import load_data, create_data_gen_xy
+from utils import load_data, create_data_gen_xy, visual_results
 from fast_ml.model_development import train_valid_test_split
 
 from tensorflow.keras.optimizers import Adam
@@ -24,11 +25,13 @@ tf.random.set_seed(SEED)
 gpus = tf.config.experimental.list_physical_devices('GPU')
 for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 
 if __name__ == '__main__':
     # PARAMS
     batch_size = 256
-    epochs = 100
+    epochs = 5
+    save_file_path = ".\\save\\base2\\"
 
     # LOAD DATA -------------------------------------------------------
     dataframe = load_data("D:\\Data", source='afad')
@@ -52,18 +55,33 @@ if __name__ == '__main__':
 
     # MODEL -----------------------------------------------------------
     model = base.create_model(input_shape=[160, 160, 3])
+    model.summary()
+
+    # LOAD MODEL ------------------------------------------------------
+    if os.path.exists(save_file_path):
+        print("Model {} loaded.".format(save_file_path))
+        model.load_weights(save_file_path)
+
+    else:
+        print("Train new model.")
 
     # COMPILE ---------------------------------------------------------
     model.compile(
         optimizer=Adam(learning_rate=0.001),
-        loss=['mae'],
-        metrics={'age': 'mse'}
+        loss=['categorical_crossentropy'],
+        metrics=['categorical_accuracy']
     )
+
+    # # TEST ZONE -------------------------------------------------------
+    # img_ori = tf.random.uniform(shape=[1, 160, 160, 3])
+    # result = model([img_ori])
+    # print(result)
 
     # CALLBACKS -------------------------------------------------------
     callbacks = [
-        ModelCheckpoint(".\\save\\base\\", monitor='val_mse', verbose=1, save_best_only=True, save_weights_only=True,
-                        mode='min'),
+        ModelCheckpoint(save_file_path, monitor='val_categorical_accuracy', verbose=1, save_best_only=True,
+                        save_weights_only=True,
+                        mode='max'),
     ]
 
     # FIT -------------------------------------------------------------
@@ -74,6 +92,11 @@ if __name__ == '__main__':
                         validation_data=valid_gen,
                         validation_steps=len(X_valid) / batch_size)
 
-    predict = model.evaluate(test_gen,
-                             steps=len(X_test) / batch_size)
-    print(predict)
+    evaluate = model.evaluate(test_gen,
+                              steps=len(X_test) / batch_size)
+
+    # VISUAL
+    for test_data in test_gen:
+        results = model.predict(test_data[0])
+        visual_results(save_file_path, test_data, results)
+        break

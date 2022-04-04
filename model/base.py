@@ -9,7 +9,7 @@ def create_model(input_shape=(160, 160, 3)):
     x = Activation('relu')(x)
     x = Flatten()(x)
     x = Dense(10)(x)
-    outputs = Dense(1, name='age')(x)
+    outputs = Dense(10, activation='softmax')(x)
 
     model = Model(inputs=inputs, outputs=outputs)
     return model
