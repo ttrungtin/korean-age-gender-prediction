@@ -93,7 +93,7 @@ def age_categories_convert(age_label):
     return age_convert
 
 
-# cate: categories | reg: regression
+# cate: categories | reg: regression | all: both cate+reg
 def create_data_gen_df(dataframe, batch_size, mode='cate'):
     dataframe = dataframe.reset_index(drop=True)
     all_nums = len(dataframe)
@@ -107,16 +107,26 @@ def create_data_gen_df(dataframe, batch_size, mode='cate'):
 
             # y label
             age_label = sub_df.age.to_numpy()
+            y_label = []
 
             if mode == 'cate':
                 age_label = age_categories_convert(age_label)
                 age_label = to_categorical(age_label, num_classes=10)
                 age_label = np.expand_dims(age_label, axis=2)
+                y_label = [age_label]
 
             elif mode == 'reg':
                 age_label = np.expand_dims(age_label, axis=1)
+                y_label = [age_label]
 
-            y_label = [age_label]
+            elif mode == 'all':
+                age_cate = age_categories_convert(age_label)
+                age_cate = to_categorical(age_cate, num_classes=10)
+                age_cate = np.expand_dims(age_cate, axis=2)
+
+                age_reg = np.expand_dims(age_label, axis=1)
+
+                y_label = [age_cate, age_reg]
 
             # x data
             x_data = np.array([image_decode(row) for row in sub_df.iterrows()])
@@ -128,7 +138,7 @@ def create_data_gen_df(dataframe, batch_size, mode='cate'):
             start += batch_size
 
 
-# cate: categories | reg: regression
+# cate: categories | reg: regression | all: both cate+reg
 def create_data_gen_xy(X, y, batch_size, mode='cate'):
     X = X.reset_index(drop=True)
     y = y.reset_index(drop=True)
@@ -143,16 +153,26 @@ def create_data_gen_xy(X, y, batch_size, mode='cate'):
 
             # y label
             age_label = sub_y_df.age.to_numpy()
+            y_label = []
 
             if mode == 'cate':
                 age_label = age_categories_convert(age_label)
                 age_label = to_categorical(age_label, num_classes=10)
                 age_label = np.expand_dims(age_label, axis=2)
+                y_label = [age_label]
 
             elif mode == 'reg':
                 age_label = np.expand_dims(age_label, axis=1)
+                y_label = [age_label]
 
-            y_label = [age_label]
+            elif mode == 'all':
+                age_cate = age_categories_convert(age_label)
+                age_cate = to_categorical(age_cate, num_classes=10)
+                age_cate = np.expand_dims(age_cate, axis=2)
+
+                age_reg = np.expand_dims(age_label, axis=1)
+
+                y_label = [age_cate, age_reg]
 
             # x data
             x_data = np.array([image_decode(row) for row in sub_X_df.iterrows()])
@@ -164,20 +184,68 @@ def create_data_gen_xy(X, y, batch_size, mode='cate'):
             start += batch_size
 
 
-def plot_results(save_file_path, images, labels, predicts):
+def plot_results(save_file_path, images, labels, predicts, mode='cate'):
     fig, ax = plt.subplots(3, 2, figsize=[10, 20])
 
     for i in range(3):
         for j in range(2):
             idx = i * 2 + j
             ax[i, j].imshow(images[idx])
-            ax[i, j].title.set_text('label: {} - pred: {}'.format(age_dict[labels[idx]], age_dict[predicts[idx]]))
+
+            if mode == "all":
+                ax[i, j].title.set_text(
+                    'label: {:s}|{:0.2f} - pred: {:s}|{:0.2f}'.format(
+                        age_dict[labels[0][idx]], labels[1][idx],
+                        age_dict[predicts[0][idx]], predicts[1][idx]))
+            elif mode == 'cate':
+                ax[i, j].title.set_text(
+                    'label: {} - pred: {}'.format(age_dict[labels[idx]], age_dict[predicts[idx]]))
+            else:
+                ax[i, j].title.set_text(
+                    'label: {:0.2f} - pred: {:0.2f}'.format(labels[idx], predicts[idx]))
 
     fig.savefig('{}result.jpg'.format(save_file_path))
 
 
-def visual_results(save_file_path, test_data, results):
+def visual_results(save_file_path, test_data, results, mode='cate'):
     images = test_data[0][0][:6]
-    labels = test_data[1][0][:6].squeeze().argmax(axis=1)
-    predicts = np.argmax(results, axis=1)[:6]
-    plot_results(save_file_path, images, labels, predicts)
+    if mode == 'cate':
+        labels = test_data[1][0][:6].squeeze().argmax(axis=1)
+
+        predicts = np.argmax(results, axis=1)[:6]
+
+        plot_results(save_file_path, images, labels, predicts, mode=mode)
+
+    elif mode == 'reg':
+        labels = test_data[1][0][:6].squeeze()
+
+        predicts = results[:6].squeeze()
+
+        plot_results(save_file_path, images, labels, predicts, mode=mode)
+
+    elif mode == 'all':
+        labels_cate = test_data[1][0][:6].squeeze().argmax(axis=1)
+        labels_reg = test_data[1][1][:6].squeeze()
+
+        predicts_cate = np.argmax(results[0], axis=1)[:6]
+        predicts_reg = results[1][:6].squeeze()
+
+        plot_results(save_file_path, images, [labels_cate, labels_reg], [predicts_cate, predicts_reg], mode=mode)
+
+
+def visual_history(save_file_path, history):
+    epoch = history.epoch
+    history = history.history
+
+    assert len(history) % 2 == 0, 'History format error.'
+
+    half = int(len(history) / 2)
+    fig, ax = plt.subplots(half, 1, figsize=[10, 20])
+
+    for idx, key in enumerate(history):
+        if idx >= half:
+            idx -= half
+        ax[idx].plot(epoch, history[key], label=key)
+        ax[idx].legend()
+
+    fig.savefig('{}chart.jpg'.format(save_file_path))
