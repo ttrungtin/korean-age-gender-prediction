@@ -11,11 +11,11 @@ from tensorflow.keras.callbacks import ModelCheckpoint
 '''
 SOURCE:
     'wiki': 'wiki_crop',
-    'imdb': 'imdb_crop_{}.feather',
+    'imdb': 'imdb',
     'utk': 'UTKFace',
-    'cacd': 'cacd.feather',
-    'facial': 'facial-age.feather',
-    'asia': 'All-Age-Faces Dataset',
+    'cacd': 'cacd',
+    'facial': 'Facial',
+    'asia': 'All-Age-Faces',
     'afad': 'AFAD-Full'
     
 MODEL DICT:
@@ -35,12 +35,14 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 if __name__ == '__main__':
     # PARAMS
     batch_size = 256
-    epochs = 10
+    epochs = 50
     mode = "all"
-    save_file_path = ".\\save\\base3_{}\\".format(mode)
+    source = 'afad'
+    ver = 3
+    save_file_path = ".\\save\\base{}_{}\\".format(ver, mode)
 
     # LOAD DATA -------------------------------------------------------
-    dataframe = load_data("D:\\Data", source='afad')
+    dataframe = load_data("D:\\Data", source=source)
 
     # SPLIT -----------------------------------------------------------
     train_rate = 0.8

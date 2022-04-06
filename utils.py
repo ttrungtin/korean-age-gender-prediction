@@ -8,11 +8,11 @@ from tensorflow.keras.utils import to_categorical
 
 feather_dict = {
     'wiki': 'wiki_crop',
-    'imdb': 'imdb_crop_{}.feather',
+    'imdb': 'imdb',
     'utk': 'UTKFace',
-    'cacd': 'cacd.feather',
-    'facial': 'facial-age.feather',
-    'asia': 'All-Age-Faces Dataset',
+    'cacd': 'cacd',
+    'facial': 'Facial',
+    'asia': 'All-Age-Faces',
     'afad': 'AFAD-Full'
 }
 
