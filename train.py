@@ -1,8 +1,8 @@
 import tensorflow as tf
 import os
 
-from model import base
-from utils import load_data, create_data_gen_xy, visual_results, visual_history
+from model import base, cnn
+from utils import load_data, create_data_gen_xy, visual_results, visual_history, create_data_gen
 from fast_ml.model_development import train_valid_test_split
 
 from tensorflow.keras.optimizers import Adam
@@ -35,10 +35,10 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 if __name__ == '__main__':
     # PARAMS
     batch_size = 256
-    epochs = 50
+    epochs = 100
     mode = "all"
-    source = 'afad'
-    ver = 3
+    source = 'imdb'
+    ver = 5
     save_file_path = ".\\save\\base{}_{}\\".format(ver, mode)
 
     # LOAD DATA -------------------------------------------------------
@@ -58,9 +58,9 @@ if __name__ == '__main__':
 
     # DATA GEN --------------------------------------------------------
     # cate: categories | reg: regression | all: both cate+reg
-    train_gen = create_data_gen_xy(X_train, y_train, batch_size, mode=mode)
-    test_gen = create_data_gen_xy(X_test, y_test, batch_size, mode=mode)
-    valid_gen = create_data_gen_xy(X_valid, y_valid, batch_size, mode=mode)
+    train_gen = create_data_gen(X_train, y_train, batch_size, mode=mode)
+    test_gen = create_data_gen(X_test, y_test, batch_size, mode=mode)
+    valid_gen = create_data_gen(X_valid, y_valid, batch_size, mode=mode)
 
     # # TEST ZONE -------------------------------------------------------
     # for i in train_gen:
@@ -73,7 +73,9 @@ if __name__ == '__main__':
     elif mode == 'cate':
         model = base.create_model_cate(input_shape=[160, 160, 3])
     else:
-        model = base.create_model_all(input_shape=[160, 160, 3])
+        model = cnn.create_model_all(input_shape=[160, 160, 3])
+
+    model.summary()
 
     # LOAD MODEL ------------------------------------------------------
     if os.path.exists(save_file_path):
@@ -93,13 +95,13 @@ if __name__ == '__main__':
     elif mode == 'cate':
         model.compile(
             optimizer=Adam(learning_rate=0.001),
-            loss=['categorical_crossentropy'],
+            loss={'cate': 'categorical_crossentropy'},
             metrics={"cate": 'categorical_accuracy'}
         )
     else:
         model.compile(
             optimizer=Adam(learning_rate=0.001),
-            loss=['categorical_crossentropy', 'mae'],
+            loss={'cate': 'categorical_crossentropy', 'reg': 'mae'},
             metrics={"cate": 'categorical_accuracy', "reg": 'mae'}
         )
 
