@@ -6,7 +6,7 @@ from utils import load_data, create_data_gen_xy, visual_results, visual_history,
 from fast_ml.model_development import train_valid_test_split
 
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.callbacks import ModelCheckpoint
+from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
 
 '''
 SOURCE:
@@ -27,9 +27,9 @@ MODEL DICT:
 SEED = 22
 tf.random.set_seed(SEED)
 
-gpus = tf.config.experimental.list_physical_devices('GPU')
-for gpu in gpus:
-    tf.config.experimental.set_memory_growth(gpu, True)
+# gpus = tf.config.experimental.list_physical_devices('GPU')
+# for gpu in gpus:
+#     tf.config.experimental.set_memory_growth(gpu, True)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 
 if __name__ == '__main__':
@@ -37,9 +37,10 @@ if __name__ == '__main__':
     batch_size = 256
     epochs = 100
     mode = "all"
-    source = 'imdb'
-    ver = 5
+    source = 'wiki'
+    ver = 6
     save_file_path = ".\\save\\base{}_{}\\".format(ver, mode)
+    log_path = ".\\log\\"
 
     # LOAD DATA -------------------------------------------------------
     dataframe = load_data("D:\\Data", source=source)
@@ -115,6 +116,7 @@ if __name__ == '__main__':
         ModelCheckpoint(save_file_path, monitor='val_loss', verbose=1, save_best_only=True,
                         save_weights_only=True,
                         mode='min'),
+        TensorBoard(log_dir=log_path, write_images=True, update_freq='epoch'),
     ]
 
     # FIT -------------------------------------------------------------

@@ -1,5 +1,5 @@
 from tensorflow.keras.layers import Conv2D, Input, BatchNormalization, Activation, Flatten, Dense, ReLU, \
-    AveragePooling2D
+    AveragePooling2D, Dropout
 from tensorflow.keras.models import Model
 
 
@@ -21,14 +21,20 @@ def create_model_all(input_shape=(160, 160, 3)):
     x = ReLU()(x)
     x = AveragePooling2D(pool_size=(2, 2), strides=(2, 2))(x)
 
-    x = Conv2D(32, kernel_size=3, padding='valid', strides=1)(inputs)
+    x = Conv2D(32, kernel_size=3, padding='valid', strides=1)(x)
     x = BatchNormalization()(x)
     x = ReLU()(x)
     x = AveragePooling2D(pool_size=(2, 2), strides=(2, 2))(x)
 
-    x = Conv2D(32, kernel_size=1, padding='valid', strides=1)(inputs)
+    x = Conv2D(32, kernel_size=1, padding='valid', strides=1)(x)
+    x = BatchNormalization()(x)
+    x = ReLU()(x)
 
     x = Flatten()(x)
+    x = Dense(64, activation='relu')(x)
+    x = Dropout(0.3)(x)
+    x = BatchNormalization()(x)
+
     output_cate = Dense(10, activation='softmax', name='cate')(x)
     output_reg = Dense(1, name='reg')(x)
 

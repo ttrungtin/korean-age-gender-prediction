@@ -129,10 +129,12 @@ def create_data_gen(*args, **kwds):
                 age_label = age_categories_convert(age_label)
                 age_label = to_categorical(age_label, num_classes=num_classes)
                 age_label = np.expand_dims(age_label, axis=2)
+
                 y_label = [age_label]
 
             elif mode == 'reg':
                 age_label = np.expand_dims(age_label, axis=1)
+
                 y_label = [age_label]
 
             elif mode == 'all':
