@@ -152,6 +152,4 @@ cython_debug/
 .idea/
 
 /save
-*.ipynb
-*.jpg
 /log
