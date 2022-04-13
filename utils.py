@@ -16,20 +16,32 @@ feather_dict = {
     'afad': 'AFAD-Full'
 }
 
-age_dict = {
-    0: '0-10',
-    1: '10-20',
-    2: '20-30',
-    3: '30-40',
-    4: '40-50',
-    5: '50-60',
-    6: '60-70',
-    7: '70-80',
-    8: '80-90',
-    9: '90-100'
-}
+# age_dict = {
+#     0: '0-10',
+#     1: '10-20',
+#     2: '20-30',
+#     3: '30-40',
+#     4: '40-50',
+#     5: '50-60',
+#     6: '60-70',
+#     7: '70-80',
+#     8: '80-90',
+#     9: '90-100'
+# }
 
-num_classes = 10
+age_dict = {
+    0: '0-1',
+    1: '1-3',
+    2: '3-6',
+    3: '6-9',
+    4: '9-12',
+    5: '12-15',
+    6: '15-30',
+    7: '30-45',
+    8: '45-65',
+    9: '65-85',
+    10: '85-100'
+}
 
 
 def load_data(data_path, source):
@@ -78,19 +90,51 @@ def image_decode(row):
     return img_list
 
 
-def age_categories_convert(age_label):
+def age_categories_convert(age_label, num_classes, soft_label):
+    # Init
     age_convert = np.zeros_like(age_label)
 
-    age_convert[age_label < 10] = 0
-    age_convert[(age_label >= 10) & (age_label < 20)] = 1
-    age_convert[(age_label >= 20) & (age_label < 30)] = 2
-    age_convert[(age_label >= 30) & (age_label < 40)] = 3
-    age_convert[(age_label >= 40) & (age_label < 50)] = 4
-    age_convert[(age_label >= 50) & (age_label < 60)] = 5
-    age_convert[(age_label >= 60) & (age_label < 70)] = 6
-    age_convert[(age_label >= 70) & (age_label < 80)] = 7
-    age_convert[(age_label >= 80) & (age_label < 90)] = 8
-    age_convert[(age_label >= 90) & (age_label < 100)] = 9
+    # # Age group
+    # age_convert[age_label < 10] = 0
+    # age_convert[(age_label >= 10) & (age_label < 20)] = 1
+    # age_convert[(age_label >= 20) & (age_label < 30)] = 2
+    # age_convert[(age_label >= 30) & (age_label < 40)] = 3
+    # age_convert[(age_label >= 40) & (age_label < 50)] = 4
+    # age_convert[(age_label >= 50) & (age_label < 60)] = 5
+    # age_convert[(age_label >= 60) & (age_label < 70)] = 6
+    # age_convert[(age_label >= 70) & (age_label < 80)] = 7
+    # age_convert[(age_label >= 80) & (age_label < 90)] = 8
+    # age_convert[(age_label >= 90) & (age_label < 100)] = 9
+
+    # Age group
+    age_convert[age_label <= 1] = 0
+    age_convert[(age_label > 1) & (age_label <= 3)] = 1
+    age_convert[(age_label > 3) & (age_label <= 6)] = 2
+    age_convert[(age_label > 6) & (age_label <= 9)] = 3
+    age_convert[(age_label > 9) & (age_label <= 12)] = 4
+    age_convert[(age_label > 12) & (age_label <= 15)] = 5
+    age_convert[(age_label > 15) & (age_label <= 30)] = 6
+    age_convert[(age_label > 30) & (age_label <= 45)] = 7
+    age_convert[(age_label > 45) & (age_label <= 65)] = 8
+    age_convert[(age_label > 65) & (age_label <= 85)] = 9
+    age_convert[(age_label > 85) & (age_label <= 100)] = 10
+
+    # To one-hot vector
+    age_convert = to_categorical(age_convert, num_classes=num_classes)
+
+    # Soft label
+    if soft_label:
+        for i in age_convert:
+            max_idx = i.argmax()
+            if (max_idx >= 1) and (max_idx < len(i) - 1):
+                i[max_idx - 1], i[max_idx], i[max_idx + 1] = 0.1, 0.8, 0.1
+            elif max_idx == 0:
+                i[max_idx], i[max_idx + 1] = 0.8, 0.2
+            elif max_idx == len(i) - 1:
+                i[max_idx - 1], i[max_idx] = 0.2, 0.8
+
+    # Expand dim
+    age_convert = np.expand_dims(age_convert, axis=2)
 
     return age_convert
 
@@ -98,6 +142,8 @@ def age_categories_convert(age_label):
 # cate: categories | reg: regression | all: both cate+reg
 def create_data_gen(*args, **kwds):
     mode = kwds['mode']
+    num_classes = kwds['num_classes']
+    soft_label = kwds['soft_label']
 
     if len(args) == 2:
         dataframe = args[0].reset_index(drop=True)
@@ -126,24 +172,16 @@ def create_data_gen(*args, **kwds):
 
             y_label = []
             if mode == 'cate':
-                age_label = age_categories_convert(age_label)
-                age_label = to_categorical(age_label, num_classes=num_classes)
-                age_label = np.expand_dims(age_label, axis=2)
-
-                y_label = [age_label]
+                age_cate = age_categories_convert(age_label, num_classes=num_classes, soft_label=soft_label)
+                y_label = [age_cate]
 
             elif mode == 'reg':
-                age_label = np.expand_dims(age_label, axis=1)
-
-                y_label = [age_label]
+                age_reg = np.expand_dims(age_label, axis=1)
+                y_label = [age_reg]
 
             elif mode == 'all':
-                age_cate = age_categories_convert(age_label)
-                age_cate = to_categorical(age_cate, num_classes=num_classes)
-                age_cate = np.expand_dims(age_cate, axis=2)
-
+                age_cate = age_categories_convert(age_label, num_classes=num_classes, soft_label=soft_label)
                 age_reg = np.expand_dims(age_label, axis=1)
-
                 y_label = [age_cate, age_reg]
 
             # x data
@@ -159,96 +197,96 @@ def create_data_gen(*args, **kwds):
             start += batch_size
 
 
-# cate: categories | reg: regression | all: both cate+reg
-def create_data_gen_df(dataframe, batch_size, mode='cate'):
-    dataframe = dataframe.reset_index(drop=True)
-    all_nums = len(dataframe)
-    while True:
-        idxs = np.random.permutation(all_nums)
-        start = 0
+# # cate: categories | reg: regression | all: both cate+reg
+# def create_data_gen_df(dataframe, batch_size, mode='cate'):
+#     dataframe = dataframe.reset_index(drop=True)
+#     all_nums = len(dataframe)
+#     while True:
+#         idxs = np.random.permutation(all_nums)
+#         start = 0
+#
+#         while start + batch_size < all_nums:
+#             sub_idxs = list(idxs[start:start + batch_size])
+#             sub_df = dataframe.iloc[sub_idxs]
+#
+#             # y label
+#             age_label = sub_df.age.to_numpy()
+#             y_label = []
+#
+#             if mode == 'cate':
+#                 age_label = age_categories_convert(age_label)
+#                 age_label = to_categorical(age_label, num_classes=num_classes)
+#                 age_label = np.expand_dims(age_label, axis=2)
+#                 y_label = [age_label]
+#
+#             elif mode == 'reg':
+#                 age_label = np.expand_dims(age_label, axis=1)
+#                 y_label = [age_label]
+#
+#             elif mode == 'all':
+#                 age_cate = age_categories_convert(age_label)
+#                 age_cate = to_categorical(age_cate, num_classes=num_classes)
+#                 age_cate = np.expand_dims(age_cate, axis=2)
+#
+#                 age_reg = np.expand_dims(age_label, axis=1)
+#
+#                 y_label = [age_cate, age_reg]
+#
+#             # x data
+#             x_data = np.array([image_decode(row) for row in sub_df.iterrows()])
+#
+#             # out
+#             yield [x_data.squeeze()], y_label
+#
+#             # continue
+#             start += batch_size
 
-        while start + batch_size < all_nums:
-            sub_idxs = list(idxs[start:start + batch_size])
-            sub_df = dataframe.iloc[sub_idxs]
 
-            # y label
-            age_label = sub_df.age.to_numpy()
-            y_label = []
-
-            if mode == 'cate':
-                age_label = age_categories_convert(age_label)
-                age_label = to_categorical(age_label, num_classes=num_classes)
-                age_label = np.expand_dims(age_label, axis=2)
-                y_label = [age_label]
-
-            elif mode == 'reg':
-                age_label = np.expand_dims(age_label, axis=1)
-                y_label = [age_label]
-
-            elif mode == 'all':
-                age_cate = age_categories_convert(age_label)
-                age_cate = to_categorical(age_cate, num_classes=num_classes)
-                age_cate = np.expand_dims(age_cate, axis=2)
-
-                age_reg = np.expand_dims(age_label, axis=1)
-
-                y_label = [age_cate, age_reg]
-
-            # x data
-            x_data = np.array([image_decode(row) for row in sub_df.iterrows()])
-
-            # out
-            yield [x_data.squeeze()], y_label
-
-            # continue
-            start += batch_size
-
-
-# cate: categories | reg: regression | all: both cate+reg
-def create_data_gen_xy(X, y, batch_size, mode='cate'):
-    X = X.reset_index(drop=True)
-    y = y.reset_index(drop=True)
-    all_nums = len(X)
-    while True:
-        idxs = np.random.permutation(all_nums)
-        start = 0
-
-        while start + batch_size < all_nums:
-            sub_idxs = list(idxs[start:start + batch_size])
-            sub_X_df = X.iloc[sub_idxs]
-            sub_y_df = y.iloc[sub_idxs]
-
-            # y label
-            age_label = sub_y_df.age.to_numpy()
-            y_label = []
-
-            if mode == 'cate':
-                age_label = age_categories_convert(age_label)
-                age_label = to_categorical(age_label, num_classes=num_classes)
-                age_label = np.expand_dims(age_label, axis=2)
-                y_label = [age_label]
-
-            elif mode == 'reg':
-                age_label = np.expand_dims(age_label, axis=1)
-                y_label = [age_label]
-
-            elif mode == 'all':
-                age_cate = age_categories_convert(age_label)
-                age_cate = to_categorical(age_cate, num_classes=num_classes)
-                age_cate = np.expand_dims(age_cate, axis=2)
-
-                age_reg = np.expand_dims(age_label, axis=1)
-
-                y_label = [age_cate, age_reg]
-
-            # x data
-            x_data = np.array([image_decode(row) for row in sub_X_df.iterrows()])
-
-            # out
-            yield [x_data.squeeze()], y_label
-
-            # continue
-            start += batch_size
+# # cate: categories | reg: regression | all: both cate+reg
+# def create_data_gen_xy(X, y, batch_size, mode='cate'):
+#     X = X.reset_index(drop=True)
+#     y = y.reset_index(drop=True)
+#     all_nums = len(X)
+#     while True:
+#         idxs = np.random.permutation(all_nums)
+#         start = 0
+#
+#         while start + batch_size < all_nums:
+#             sub_idxs = list(idxs[start:start + batch_size])
+#             sub_X_df = X.iloc[sub_idxs]
+#             sub_y_df = y.iloc[sub_idxs]
+#
+#             # y label
+#             age_label = sub_y_df.age.to_numpy()
+#             y_label = []
+#
+#             if mode == 'cate':
+#                 age_label = age_categories_convert(age_label)
+#                 age_label = to_categorical(age_label, num_classes=num_classes)
+#                 age_label = np.expand_dims(age_label, axis=2)
+#                 y_label = [age_label]
+#
+#             elif mode == 'reg':
+#                 age_label = np.expand_dims(age_label, axis=1)
+#                 y_label = [age_label]
+#
+#             elif mode == 'all':
+#                 age_cate = age_categories_convert(age_label)
+#                 age_cate = to_categorical(age_cate, num_classes=num_classes)
+#                 age_cate = np.expand_dims(age_cate, axis=2)
+#
+#                 age_reg = np.expand_dims(age_label, axis=1)
+#
+#                 y_label = [age_cate, age_reg]
+#
+#             # x data
+#             x_data = np.array([image_decode(row) for row in sub_X_df.iterrows()])
+#
+#             # out
+#             yield [x_data.squeeze()], y_label
+#
+#             # continue
+#             start += batch_size
 
 
 def plot_results(save_file_path, images, labels, predicts, mode='cate'):

@@ -2,8 +2,8 @@ import tensorflow as tf
 import os
 
 from model import base, cnn
-from utils import load_data, create_data_gen_xy, visual_results, visual_history, create_data_gen
-from fast_ml.model_development import train_valid_test_split
+from utils import load_data, visual_results, visual_history, create_data_gen
+from fast_ml.model_development import train_valid_test_split, train_test_split
 
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
@@ -37,31 +37,48 @@ if __name__ == '__main__':
     batch_size = 256
     epochs = 100
     mode = "all"
-    source = 'wiki'
-    ver = 6
+    source = 'imdb'
+    ver = 7
     save_file_path = ".\\save\\base{}_{}\\".format(ver, mode)
     log_path = ".\\log\\"
+    use_valid = False
+    num_classes = 11
+    soft_label = True  # soft categorical label
 
     # LOAD DATA -------------------------------------------------------
     dataframe = load_data("D:\\Data", source=source)
 
     # SPLIT -----------------------------------------------------------
-    train_rate = 0.8
-    valid_rate = 0.1
-    test_rate = 0.1
+    if use_valid:
+        train_rate, valid_rate, test_rate = [0.8, 0.1, 0.1]
 
-    X_train, y_train, X_valid, y_valid, X_test, y_test = train_valid_test_split(dataframe,
-                                                                                target=['age'],
-                                                                                train_size=train_rate,
-                                                                                valid_size=valid_rate,
-                                                                                test_size=test_rate,
-                                                                                random_state=SEED)
+        X_train, y_train, X_valid, y_valid, X_test, y_test = train_valid_test_split(dataframe,
+                                                                                    target=['age'],
+                                                                                    train_size=train_rate,
+                                                                                    valid_size=valid_rate,
+                                                                                    test_size=test_rate,
+                                                                                    random_state=SEED)
+
+    else:
+        train_rate, test_rate = [0.8, 0.2]
+        Xy_train, Xy_test = train_test_split(dataframe,
+                                             train_size=train_rate,
+                                             test_size=test_rate,
+                                             shuffle=True)
 
     # DATA GEN --------------------------------------------------------
     # cate: categories | reg: regression | all: both cate+reg
-    train_gen = create_data_gen(X_train, y_train, batch_size, mode=mode)
-    test_gen = create_data_gen(X_test, y_test, batch_size, mode=mode)
-    valid_gen = create_data_gen(X_valid, y_valid, batch_size, mode=mode)
+    if use_valid:
+        train_gen = create_data_gen(X_train, y_train, batch_size, mode=mode, num_classes=num_classes,
+                                    soft_label=soft_label)
+        test_gen = create_data_gen(X_test, y_test, batch_size, mode=mode, num_classes=num_classes,
+                                   soft_label=soft_label)
+        valid_gen = create_data_gen(X_valid, y_valid, batch_size, mode=mode, num_classes=num_classes,
+                                    soft_label=soft_label)
+
+    else:
+        train_gen = create_data_gen(Xy_train, batch_size, mode=mode, num_classes=num_classes, soft_label=soft_label)
+        test_gen = create_data_gen(Xy_test, batch_size, mode=mode, num_classes=num_classes, soft_label=soft_label)
 
     # # TEST ZONE -------------------------------------------------------
     # for i in train_gen:
@@ -72,9 +89,9 @@ if __name__ == '__main__':
     if mode == 'reg':
         model = base.create_model_reg(input_shape=[160, 160, 3])
     elif mode == 'cate':
-        model = base.create_model_cate(input_shape=[160, 160, 3])
+        model = base.create_model_cate(input_shape=[160, 160, 3], num_classes=num_classes)
     else:
-        model = cnn.create_model_all(input_shape=[160, 160, 3])
+        model = cnn.create_model_all(input_shape=[160, 160, 3], num_classes=num_classes)
 
     model.summary()
 
@@ -120,15 +137,27 @@ if __name__ == '__main__':
     ]
 
     # FIT -------------------------------------------------------------
-    history = model.fit(train_gen,
-                        steps_per_epoch=len(X_train) / batch_size,
-                        epochs=epochs,
-                        callbacks=callbacks,
-                        validation_data=valid_gen,
-                        validation_steps=len(X_valid) / batch_size)
+    if use_valid:
+        history = model.fit(train_gen,
+                            steps_per_epoch=len(X_train) / batch_size,
+                            epochs=epochs,
+                            callbacks=callbacks,
+                            validation_data=valid_gen,
+                            validation_steps=len(X_valid) / batch_size)
 
-    evaluate = model.evaluate(test_gen,
-                              steps=len(X_test) / batch_size)
+        evaluate = model.evaluate(test_gen,
+                                  steps=len(X_test) / batch_size)
+
+    else:
+        history = model.fit(train_gen,
+                            steps_per_epoch=len(Xy_train) / batch_size,
+                            epochs=epochs,
+                            callbacks=callbacks,
+                            validation_data=test_gen,
+                            validation_steps=len(Xy_test) / batch_size)
+
+        evaluate = model.evaluate(test_gen,
+                                  steps=len(Xy_test) / batch_size)
 
     # VISUAL ----------------------------------------------------------
     for test_data in test_gen:
