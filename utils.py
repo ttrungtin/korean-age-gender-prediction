@@ -144,16 +144,15 @@ def create_data_gen(*args, **kwds):
     mode = kwds['mode']
     num_classes = kwds['num_classes']
     soft_label = kwds['soft_label']
+    batch_size = kwds['batch_size']
 
-    if len(args) == 2:
+    if len(args) == 1:  # <<<< for DF
         dataframe = args[0].reset_index(drop=True)
         all_nums = len(dataframe)
-        batch_size = args[1]
-    else:
+    elif len(args) == 2:  # <<<<< non DF: X,y
         X = args[0].reset_index(drop=True)
         y = args[1].reset_index(drop=True)
         all_nums = len(X)
-        batch_size = args[2]
 
     while True:
         idxs = np.random.permutation(all_nums)
@@ -162,10 +161,10 @@ def create_data_gen(*args, **kwds):
         while start + batch_size < all_nums:
             sub_idxs = list(idxs[start:start + batch_size])
 
-            if len(args) == 2:
+            if len(args) == 1:
                 sub_df = dataframe.iloc[sub_idxs]
                 age_label = sub_df.age.to_numpy()
-            else:
+            elif len(args) == 2:
                 sub_X_df = X.iloc[sub_idxs]
                 sub_y_df = y.iloc[sub_idxs]
                 age_label = sub_y_df.age.to_numpy()
@@ -185,9 +184,9 @@ def create_data_gen(*args, **kwds):
                 y_label = [age_cate, age_reg]
 
             # x data
-            if len(args) == 2:
+            if len(args) == 1:
                 x_data = np.array([image_decode(row) for row in sub_df.iterrows()])
-            else:
+            elif len(args) == 2:
                 x_data = np.array([image_decode(row) for row in sub_X_df.iterrows()])
 
             # out

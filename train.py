@@ -13,10 +13,10 @@ SOURCE:
     'wiki': 'wiki_crop',
     'imdb': 'imdb',
     'utk': 'UTKFace',
-    'cacd': 'cacd',
+    'cacd': 'cacd', <<< for benchmark
     'facial': 'Facial',
     'asia': 'All-Age-Faces',
-    'afad': 'AFAD-Full'
+    'afad': 'AFAD-Full' <<< for benchmark
     
 MODEL DICT:
     cate
@@ -36,23 +36,26 @@ if __name__ == '__main__':
     # PARAMS
     batch_size = 256
     epochs = 100
+
     mode = "all"
-    source = 'imdb'
     ver = 7
     save_file_path = ".\\save\\base{}_{}\\".format(ver, mode)
     log_path = ".\\log\\"
+
     use_valid = False
     num_classes = 11
     soft_label = True  # soft categorical label
+    data_path = "D:\\Dataset\\Feather"
+    source = 'imdb'
 
     # LOAD DATA -------------------------------------------------------
-    dataframe = load_data("D:\\Data", source=source)
+    training_df = load_data(data_path, source=source)
 
     # SPLIT -----------------------------------------------------------
     if use_valid:
         train_rate, valid_rate, test_rate = [0.8, 0.1, 0.1]
 
-        X_train, y_train, X_valid, y_valid, X_test, y_test = train_valid_test_split(dataframe,
+        X_train, y_train, X_valid, y_valid, X_test, y_test = train_valid_test_split(training_df,
                                                                                     target=['age'],
                                                                                     train_size=train_rate,
                                                                                     valid_size=valid_rate,
@@ -61,7 +64,7 @@ if __name__ == '__main__':
 
     else:
         train_rate, test_rate = [0.8, 0.2]
-        Xy_train, Xy_test = train_test_split(dataframe,
+        Xy_train, Xy_test = train_test_split(training_df,
                                              train_size=train_rate,
                                              test_size=test_rate,
                                              shuffle=True)
@@ -69,16 +72,18 @@ if __name__ == '__main__':
     # DATA GEN --------------------------------------------------------
     # cate: categories | reg: regression | all: both cate+reg
     if use_valid:
-        train_gen = create_data_gen(X_train, y_train, batch_size, mode=mode, num_classes=num_classes,
+        train_gen = create_data_gen(X_train, y_train, batch_size=batch_size, mode=mode, num_classes=num_classes,
                                     soft_label=soft_label)
-        test_gen = create_data_gen(X_test, y_test, batch_size, mode=mode, num_classes=num_classes,
+        test_gen = create_data_gen(X_test, y_test, batch_size=batch_size, mode=mode, num_classes=num_classes,
                                    soft_label=soft_label)
-        valid_gen = create_data_gen(X_valid, y_valid, batch_size, mode=mode, num_classes=num_classes,
+        valid_gen = create_data_gen(X_valid, y_valid, batch_size=batch_size, mode=mode, num_classes=num_classes,
                                     soft_label=soft_label)
 
     else:
-        train_gen = create_data_gen(Xy_train, batch_size, mode=mode, num_classes=num_classes, soft_label=soft_label)
-        test_gen = create_data_gen(Xy_test, batch_size, mode=mode, num_classes=num_classes, soft_label=soft_label)
+        train_gen = create_data_gen(Xy_train, batch_size=batch_size, mode=mode, num_classes=num_classes,
+                                    soft_label=soft_label)
+        test_gen = create_data_gen(Xy_test, batch_size=batch_size, mode=mode, num_classes=num_classes,
+                                   soft_label=soft_label)
 
     # # TEST ZONE -------------------------------------------------------
     # for i in train_gen:
