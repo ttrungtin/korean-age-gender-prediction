@@ -341,6 +341,11 @@ def visual_history(save_file_path, history):
     epoch = history.epoch
     history = history.history
 
+    try:
+        history.pop('lr', None)
+    except:
+        pass
+
     assert len(history) % 2 == 0, 'History format error.'
 
     half = int(len(history) / 2)

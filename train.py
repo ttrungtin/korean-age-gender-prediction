@@ -1,12 +1,12 @@
 import tensorflow as tf
 import os
 
-from model import base, cnn
+from model import base, cnn, cnn2
 from utils import load_data, visual_results, visual_history, create_data_gen
 from fast_ml.model_development import train_valid_test_split, train_test_split
 
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
+from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard, ReduceLROnPlateau
 
 '''
 SOURCE:
@@ -33,20 +33,26 @@ tf.random.set_seed(SEED)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 
 if __name__ == '__main__':
-    # PARAMS
-    batch_size = 256
-    epochs = 100
+    # PARAMS ----------------------------------------------------------
+    batch_size = 512
+    epochs = 1
+    input_shape = [160, 160, 3]
 
     mode = "all"
-    ver = 7
-    save_file_path = ".\\save\\base{}_{}\\".format(ver, mode)
+    ver = 1
+    model_type = 'cnn2_base'
+    save_file_path = ".\\save\\{}_{}_{}\\".format(model_type, ver, mode)
     log_path = ".\\log\\"
 
     use_valid = False
     num_classes = 11
     soft_label = True  # soft categorical label
     data_path = "D:\\Dataset\\Feather"
-    source = 'imdb'
+    source = 'imdb|wiki'
+
+    image_net_pre_train = False
+    image_net_num_classes = 10450
+    pre_train_save_file_path = ".\\save\\cnn_base_1_all_imgnet\\"
 
     # LOAD DATA -------------------------------------------------------
     training_df = load_data(data_path, source=source)
@@ -91,22 +97,34 @@ if __name__ == '__main__':
     #     break
 
     # MODEL -----------------------------------------------------------
-    if mode == 'reg':
-        model = base.create_model_reg(input_shape=[160, 160, 3])
-    elif mode == 'cate':
-        model = base.create_model_cate(input_shape=[160, 160, 3], num_classes=num_classes)
+    if image_net_pre_train:
+        model = cnn.create_model_all(input_shape=input_shape, num_classes=image_net_num_classes,
+                                     image_net_pre_train=True)
     else:
-        model = cnn.create_model_all(input_shape=[160, 160, 3], num_classes=num_classes)
+        if mode == 'reg':
+            model = base.create_model_reg(input_shape=input_shape)
+        elif mode == 'cate':
+            model = base.create_model_cate(input_shape=input_shape, num_classes=num_classes)
+        else:
+            model = cnn2.create_model_all(input_shape=input_shape, num_classes=num_classes)
 
     model.summary()
 
     # LOAD MODEL ------------------------------------------------------
-    if os.path.exists(save_file_path):
-        print("Model {} loaded.".format(save_file_path))
-        model.load_weights(save_file_path)
-
+    if image_net_pre_train:
+        print("Model {} loaded.".format(pre_train_save_file_path))
+        model.load_weights(pre_train_save_file_path)
     else:
-        print("Train new model.")
+        if os.path.exists(save_file_path):
+            print("Model {} loaded.".format(save_file_path))
+            model.load_weights(save_file_path)
+
+        else:
+            print("Train new model.")
+
+    # CHANGE MODEL TOP
+    if image_net_pre_train:
+        model = cnn.create_top_all(model, num_classes=num_classes)
 
     # COMPILE ---------------------------------------------------------
     if mode == 'reg':
@@ -139,6 +157,7 @@ if __name__ == '__main__':
                         save_weights_only=True,
                         mode='min'),
         TensorBoard(log_dir=log_path, write_images=True, update_freq='epoch'),
+        ReduceLROnPlateau(min_lr=0.00001)
     ]
 
     # FIT -------------------------------------------------------------

@@ -1,7 +1,7 @@
 import os
 
 from utils import load_data, create_data_gen
-from model import base, cnn
+from model import base, cnn, cnn2
 from tensorflow.keras.optimizers import Adam
 
 '''
@@ -27,9 +27,10 @@ if __name__ == '__main__':
     batch_size = 256
     epochs = 100
 
-    mode = "reg"
-    ver = 3
-    save_file_path = ".\\save\\base{}_{}\\".format(ver, mode)
+    mode = "all"
+    ver = 1
+    model_type = 'cnn2_base'
+    save_file_path = ".\\save\\{}_{}_{}\\".format(model_type, ver, mode)
     log_path = ".\\log\\"
 
     use_valid = False
@@ -56,9 +57,10 @@ if __name__ == '__main__':
     elif mode == 'cate':
         model = base.create_model_cate(input_shape=[160, 160, 3], num_classes=num_classes)
     else:
-        model = cnn.create_model_all(input_shape=[160, 160, 3], num_classes=num_classes)
+        model = cnn2.create_model_all(input_shape=[160, 160, 3], num_classes=num_classes)
 
     # LOAD MODEL
+    print("Model {} loaded.".format(save_file_path))
     model.load_weights(save_file_path)
 
     # COMPILE
