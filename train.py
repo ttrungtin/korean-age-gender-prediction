@@ -27,29 +27,47 @@ MODEL DICT:
 SEED = 22
 tf.random.set_seed(SEED)
 
-# gpus = tf.config.experimental.list_physical_devices('GPU')
-# for gpu in gpus:
-#     tf.config.experimental.set_memory_growth(gpu, True)
+gpus = tf.config.experimental.list_physical_devices('GPU')
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+
+model_dict = {
+    "base": base,
+    "cnn": cnn,
+    "cnn2": cnn2
+}
+
+'''
+    base4.0: 
+        - default mode = all
+'''
 
 if __name__ == '__main__':
     # PARAMS ----------------------------------------------------------
+    # ------------------------------
     batch_size = 512
-    epochs = 1
+    epochs = 10
     input_shape = [160, 160, 3]
+    learning_rate = 0.001
 
-    mode = "all"
-    ver = 1
-    model_type = 'cnn2_base'
-    save_file_path = ".\\save\\{}_{}_{}\\".format(model_type, ver, mode)
-    log_path = ".\\log\\"
+    # ------------------------------
+    model_type = 'cnn2'
+    model_various = 'base'
+    ver = "base40"
+    save_file_path = ".\\save\\{}_{}_{}\\".format(model_type, model_various, ver)
+    log_path = ".\\logs\\log_{}_{}_{}\\".format(model_type, model_various, ver)
 
+    # ------------------------------
     use_valid = False
     num_classes = 11
     soft_label = True  # soft categorical label
-    data_path = "D:\\Dataset\\Feather"
-    source = 'imdb|wiki'
 
+    # ------------------------------
+    data_path = "D:\\Dataset\\Feather"
+    source = 'imdb|wiki|cacd'
+
+    # ------------------------------
     image_net_pre_train = False
     image_net_num_classes = 10450
     pre_train_save_file_path = ".\\save\\cnn_base_1_all_imgnet\\"
@@ -67,6 +85,7 @@ if __name__ == '__main__':
                                                                                     valid_size=valid_rate,
                                                                                     test_size=test_rate,
                                                                                     random_state=SEED)
+        print("Train: {} | Test: {} | Valid: {}".format(y_train.shape, y_test.shape, y_valid.shape))
 
     else:
         train_rate, test_rate = [0.8, 0.2]
@@ -74,21 +93,21 @@ if __name__ == '__main__':
                                              train_size=train_rate,
                                              test_size=test_rate,
                                              shuffle=True)
+        print("Train: {} | Test: {}".format(Xy_train.shape, Xy_test.shape))
 
     # DATA GEN --------------------------------------------------------
-    # cate: categories | reg: regression | all: both cate+reg
     if use_valid:
-        train_gen = create_data_gen(X_train, y_train, batch_size=batch_size, mode=mode, num_classes=num_classes,
+        train_gen = create_data_gen(X_train, y_train, batch_size=batch_size, mode="all", num_classes=num_classes,
                                     soft_label=soft_label)
-        test_gen = create_data_gen(X_test, y_test, batch_size=batch_size, mode=mode, num_classes=num_classes,
+        test_gen = create_data_gen(X_test, y_test, batch_size=batch_size, mode="all", num_classes=num_classes,
                                    soft_label=soft_label)
-        valid_gen = create_data_gen(X_valid, y_valid, batch_size=batch_size, mode=mode, num_classes=num_classes,
+        valid_gen = create_data_gen(X_valid, y_valid, batch_size=batch_size, mode="all", num_classes=num_classes,
                                     soft_label=soft_label)
 
     else:
-        train_gen = create_data_gen(Xy_train, batch_size=batch_size, mode=mode, num_classes=num_classes,
+        train_gen = create_data_gen(Xy_train, batch_size=batch_size, mode="all", num_classes=num_classes,
                                     soft_label=soft_label)
-        test_gen = create_data_gen(Xy_test, batch_size=batch_size, mode=mode, num_classes=num_classes,
+        test_gen = create_data_gen(Xy_test, batch_size=batch_size, mode="all", num_classes=num_classes,
                                    soft_label=soft_label)
 
     # # TEST ZONE -------------------------------------------------------
@@ -98,17 +117,12 @@ if __name__ == '__main__':
 
     # MODEL -----------------------------------------------------------
     if image_net_pre_train:
-        model = cnn.create_model_all(input_shape=input_shape, num_classes=image_net_num_classes,
-                                     image_net_pre_train=True)
+        model = model_dict[model_type].create_model_all(input_shape=input_shape, num_classes=image_net_num_classes,
+                                                        image_net_pre_train=True)
     else:
-        if mode == 'reg':
-            model = base.create_model_reg(input_shape=input_shape)
-        elif mode == 'cate':
-            model = base.create_model_cate(input_shape=input_shape, num_classes=num_classes)
-        else:
-            model = cnn2.create_model_all(input_shape=input_shape, num_classes=num_classes)
+        model = model_dict[model_type].create_model_all(input_shape=input_shape, num_classes=num_classes)
 
-    model.summary()
+    # model.summary()
 
     # LOAD MODEL ------------------------------------------------------
     if image_net_pre_train:
@@ -124,27 +138,14 @@ if __name__ == '__main__':
 
     # CHANGE MODEL TOP
     if image_net_pre_train:
-        model = cnn.create_top_all(model, num_classes=num_classes)
+        model = model_dict[model_type].create_top_all(model, num_classes=num_classes)
 
     # COMPILE ---------------------------------------------------------
-    if mode == 'reg':
-        model.compile(
-            optimizer=Adam(learning_rate=0.001),
-            loss=['mae'],
-            metrics={"reg": 'mae'}
-        )
-    elif mode == 'cate':
-        model.compile(
-            optimizer=Adam(learning_rate=0.001),
-            loss={'cate': 'categorical_crossentropy'},
-            metrics={"cate": 'categorical_accuracy'}
-        )
-    else:
-        model.compile(
-            optimizer=Adam(learning_rate=0.001),
-            loss={'cate': 'categorical_crossentropy', 'reg': 'mae'},
-            metrics={"cate": 'categorical_accuracy', "reg": 'mae'}
-        )
+    model.compile(
+        optimizer=Adam(learning_rate=learning_rate),
+        loss={'cate': 'categorical_crossentropy', 'reg': 'mae'},
+        metrics={"cate": 'categorical_accuracy', "reg": 'mae'}
+    )
 
     # # TEST ZONE -------------------------------------------------------
     # img_ori = tf.random.uniform(shape=[1, 160, 160, 3])
@@ -186,7 +187,7 @@ if __name__ == '__main__':
     # VISUAL ----------------------------------------------------------
     for test_data in test_gen:
         results = model.predict(test_data[0])
-        visual_results(save_file_path, test_data, results, mode=mode)
+        visual_results(save_file_path, test_data, results, mode="all")
         break
 
     # VISUAL HISTORY --------------------------------------------------

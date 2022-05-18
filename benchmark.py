@@ -27,11 +27,11 @@ if __name__ == '__main__':
     batch_size = 256
     epochs = 100
 
-    mode = "all"
-    ver = 1
-    model_type = 'cnn2_base'
-    save_file_path = ".\\save\\{}_{}_{}\\".format(model_type, ver, mode)
-    log_path = ".\\log\\"
+    model_type = 'cnn2'
+    model_various = 'base'
+    ver = "base40"
+    save_file_path = ".\\save\\{}_{}_{}\\".format(model_type, model_various, ver)
+    log_path = ".\\logs\\log_{}_{}_{}\\".format(model_type, model_various, ver)
 
     use_valid = False
     num_classes = 11
@@ -43,7 +43,7 @@ if __name__ == '__main__':
     benckmark_df = load_data(data_path, source)
 
     # DATA GEN
-    benck_gen = create_data_gen(benckmark_df, batch_size=batch_size, mode=mode, num_classes=num_classes,
+    benck_gen = create_data_gen(benckmark_df, batch_size=batch_size, mode="all", num_classes=num_classes,
                                 soft_label=soft_label)
 
     # # TEST ZONE
@@ -52,32 +52,14 @@ if __name__ == '__main__':
     #     break
 
     # MODEL
-    if mode == 'reg':
-        model = base.create_model_reg(input_shape=[160, 160, 3])
-    elif mode == 'cate':
-        model = base.create_model_cate(input_shape=[160, 160, 3], num_classes=num_classes)
-    else:
-        model = cnn2.create_model_all(input_shape=[160, 160, 3], num_classes=num_classes)
+    model = cnn2.create_model_all(input_shape=[160, 160, 3], num_classes=num_classes)
 
     # LOAD MODEL
     print("Model {} loaded.".format(save_file_path))
     model.load_weights(save_file_path)
 
     # COMPILE
-    if mode == 'reg':
-        model.compile(
-            optimizer=Adam(learning_rate=0.001),
-            loss=['mae'],
-            metrics={"reg": 'mae'}
-        )
-    elif mode == 'cate':
-        model.compile(
-            optimizer=Adam(learning_rate=0.001),
-            loss={'cate': 'categorical_crossentropy'},
-            metrics={"cate": 'categorical_accuracy'}
-        )
-    else:
-        model.compile(
+    model.compile(
             optimizer=Adam(learning_rate=0.001),
             loss={'cate': 'categorical_crossentropy', 'reg': 'mae'},
             metrics={"cate": 'categorical_accuracy', "reg": 'mae'}

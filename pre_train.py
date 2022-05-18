@@ -16,17 +16,18 @@ for gpu in gpus:
 
 if __name__ == '__main__':
     # PARAMS ------------------------------------------------
-    batch_size = 512
+    batch_size = 256
     epochs = 10
     image_size = (160, 160)
     seed = 22
-    learning_rate = 0.1
+    learning_rate = 0.001
 
-    mode = 'all'
-    ver = 1
-    model_type = 'cnn2_base'
-    save_file_path = ".\\save\\{}_{}_{}_imgnet\\".format(model_type, ver, mode)
-    log_path = ".\\log\\"
+    # ------------------------------
+    model_type = 'cnn2'
+    model_various = 'base'
+    ver = "base40"
+    save_file_path = ".\\save\\{}_{}_{}_imgnet\\".format(model_type, model_various, ver)
+    log_path = ".\\logs\\log_{}_{}_{}_imgnet\\".format(model_type, model_various, ver)
 
     train_path = "D:\\Dataset\\Raw\\imagenet21k_resized\\imagenet21k_train"
     valid_path = "D:\\Dataset\\Raw\\imagenet21k_resized\\imagenet21k_val"
