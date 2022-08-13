@@ -36,6 +36,7 @@ def get_triple_boxes(box, nose):
 def processing_data(img_dir, profile, padding=200):
     # Read image & Bordering
     img = cv2.imread(img_dir)
+    img_ori = img
     img = cv2.copyMakeBorder(img, padding, padding, padding, padding, cv2.BORDER_CONSTANT)
 
     # Find faces in images
@@ -43,7 +44,7 @@ def processing_data(img_dir, profile, padding=200):
 
     # No face in imgae
     if len(faces) == 0:
-        # print("No Face: {}".format(img_dir))
+        print("No Face: {}".format(img_dir))
         return {
             'gen': np.nan,
             'age': np.nan,
@@ -112,6 +113,14 @@ def processing_data(img_dir, profile, padding=200):
         bbox_ori = np.array(face['box'])
         bbox_1, bbox_2, bbox_3 = get_triple_boxes(bbox_ori, face['keypoints']['nose'])
 
+    elif profile == 'lab':
+        info = img_dir.split("\\")[-2]
+        gen = info.split("_")[-1]
+        gen = 0 if "M" else 1
+        age = int(info.split("_")[1])
+        bbox_ori = np.array(face['box'])
+        bbox_1, bbox_2, bbox_3 = get_triple_boxes(bbox_ori, face['keypoints']['nose'])
+
     # Preprocess image
     # Having: Raw image, bbox_ori, bbox_1, bbox_2, bbox_3
     # for b in [bbox_ori]:
@@ -126,7 +135,7 @@ def processing_data(img_dir, profile, padding=200):
 
     # Original Crop
     x, y, w, h = bbox_ori
-    crop_img_ori = cv2.resize(img[y:y + h, x:x + w, :], (160, 160))
+    crop_img_ori = cv2.resize(img_ori, (160, 160))
 
     # Neighbor Crop
     crop_img_neighbor = []
@@ -427,6 +436,48 @@ def facial(main_dir):
     feather.write_feather(dataset_df, "facial_age.feather")
 
 
+def lab(main_dir):
+    all_img_dir = []
+    dataset_df = []
+    count = 0
+    # List all image dir
+    try:
+        for age_dir in os.listdir(main_dir):
+            sub_dir = os.path.join(main_dir, age_dir)
+
+            for img_dir in os.listdir(sub_dir):
+                img_dir = os.path.join(sub_dir, img_dir)
+
+                all_img_dir.append(img_dir)
+
+    except NotADirectoryError as e:
+        print("File appeared: {}".format(e))
+
+    # Process one-by-one
+    for idx, img_dir in enumerate(tqdm(all_img_dir)):
+        print(idx, img_dir)
+
+
+        try:
+            processed_data = processing_data(img_dir, profile='lab')
+            dataset_df.append(processed_data)
+            # print(count)
+
+        except Exception as e:
+            print("Unknwon error: {}".format(e))
+
+        # count+=1
+
+    # print(all_img_dir)
+    #
+    # Save
+    print(len(dataset_df))
+    dataset_df = pd.DataFrame(dataset_df)
+    dataset_df = dataset_df.dropna()
+    feather.write_feather(dataset_df, "lab.feather")
+
+    return 0
+
 if __name__ == '__main__':
     # afad("D:\\Dataset\\Raw\\AFAD-Full", "D:\\Dataset\\Feather\\AFAD-Full") # CHECK DONE !
     # utkface("D:\\Dataset\\Raw\\UTKFace", "D:\\Dataset\\Feather\\UTKFace") # CHECK DONE !
@@ -435,7 +486,11 @@ if __name__ == '__main__':
     # asia("D:\\Dataset\\Raw\\All-Age-Faces Dataset\\aglined faces",
     #      "D:\\Dataset\\Feather\\All-Age-Faces Dataset\\aglined faces")
     # cacd("D:\\Tempdata\\cacd") # no gender
-    facial("D:\\Tempdata\\facial-age")  # no gender
+    # facial("D:\\Tempdata\\facial-age")  # no gender
+
+    lab("..\\test1\\face_data\\face_data")
+
+
 
 # img = np.frombuffer(dataset_df['img'][0], np.uint8)
 # img = cv2.imdecode(img, cv2.IMREAD_COLOR)

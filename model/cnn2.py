@@ -51,8 +51,13 @@ def create_model_all(input_shape=(160, 160, 3), num_classes=10, image_net_pre_tr
     x = BatchNormalization()(x)
 
     output_cate = Dense(num_classes, activation='softmax', name='cate')(x)
-    output_reg = Dense(1, name='reg')(x)
-    model = Model(inputs=inputs, outputs=[output_cate, output_reg])
+
+    output_reg = Dense(1, name='reg')(output_cate)
+    # output_reg = Dense(1, name='reg')(x)
+
+    output_gen = Dense(2, activation='softmax', name='gen')(x)
+    model = Model(inputs=inputs, outputs=[output_cate, output_reg, output_gen])
+    # model = Model(inputs=inputs, outputs=[output_reg, output_gen])
     return model
 
 

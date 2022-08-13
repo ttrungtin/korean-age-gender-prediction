@@ -57,12 +57,14 @@ def load_data_all(data_path, source):
 
 
 def plot_count(idx_gen, value_gen, idx_age, value_age, name):
-    fig, ax = plt.subplots(1, 2, figsize=[20, 10])
+    fig, ax = plt.subplots(1, 2, figsize=[10, 5])
 
     ax[0].bar(idx_gen, value_gen)
+    ax[0].set_title("Gender")
     ax[1].bar(idx_age, value_age)
+    ax[1].set_title("Age")
 
-    plt.title(name)
+    # fig.suptitle('ADAF Dataset')
     plt.savefig('{}.jpg'.format(name))
     # plt.show()
 
@@ -78,13 +80,13 @@ def plot_count(idx_gen, value_gen, idx_age, value_age, name):
 '''
 
 if __name__ == '__main__':
-    name = 'facial'
-    data = load_data_all("D:\Data", name)
+    name = 'imdb'
+    data = load_data_all("D:\\Dataset\\Feather", name)
 
     gen = data['gen'].value_counts().to_frame()
     age = data['age'].value_counts().to_frame().sort_index()
 
-    idx_gen = ["M", "F"]
+    idx_gen = ["Male", "Female"]
     idx_age = age.index
 
     value_gen = gen.gen

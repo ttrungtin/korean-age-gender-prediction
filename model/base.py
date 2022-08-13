@@ -2,7 +2,7 @@ from tensorflow.keras.layers import Conv2D, Input, BatchNormalization, Activatio
 from tensorflow.keras.models import Model
 
 
-def create_model_all(input_shape=(160, 160, 3), num_classes=10):
+def create_model_all(input_shape=(160, 160, 3), num_classes=10, include_gen=True):
     inputs = Input(shape=input_shape)
     x = Conv2D(32, 3, strides=2, padding='valid')(inputs)
     x = BatchNormalization()(x)
@@ -11,9 +11,13 @@ def create_model_all(input_shape=(160, 160, 3), num_classes=10):
     x = Dense(10)(x)
 
     outputs_cate = Dense(num_classes, activation='softmax', name='cate')(x)
-    outputs_reg = Dense(1, name='reg')(x)
+    outputs_reg = Dense(1, name='reg')(outputs_cate)
 
-    model = Model(inputs=inputs, outputs=[outputs_cate, outputs_reg])
+    if include_gen:
+        outputs_gen = Dense(2, activation='softmax', name='gen')(x)
+        model = Model(inputs=inputs, outputs=[outputs_cate, outputs_reg, outputs_gen])
+    else:
+        model = Model(inputs=inputs, outputs=[outputs_cate, outputs_reg])
     return model
 
 
